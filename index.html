@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تصاريح سكنات الجامعة الألمانية للتكنولوجيا في عمان</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Cairo & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) for clean Excel imports & exports -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- OpenCV.js for detecting the card edges and correcting perspective -->
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gutech: {
+                            blue: '#004A87',
+                            lightBlue: '#5290c9',
+                            softBg: '#F0F4F8',
+                            dark: '#1e293b',
+                            red: '#D92D20',
+                            gold: '#D4AF37'
+                        }
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Cairo', 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow-x: hidden;
+        }
+
+        /* Responsive scroll wrapper for A3 live preview on small mobile screens */
+        .preview-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Pulsing camera scan frame animation */
+        @keyframes scanPulse {
+            0% { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { border-color: rgba(16, 185, 129, 1); box-shadow: 0 0 15px 3px rgba(16, 185, 129, 0.6); }
+            100% { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        }
+
+        .card-frame-active {
+            animation: scanPulse 1.8s infinite;
+        }
+
+        .print-card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0;
+            align-items: start;
+            overflow: hidden;
+        }
+
+        .print-card {
+            min-width: 0;
+            aspect-ratio: 1.586;
+            overflow: hidden;
+            border: 0.3mm solid white;
+            border-radius: 0;
+            background: white;
+        }
+
+        .print-card img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* STRICT A3 LANDSCAPE PRINT RULES (1 Student = 1 A3 Landscape Page) */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .permit-page-break {
+                page-break-after: always !important;
+                break-after: page !important;
+                height: 100vh !important;
+                max-height: 290mm !important;
+                box-sizing: border-box !important;
+            }
+            .permit-sheet {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 6mm !important;
+            }
+            .print-student-data {
+                padding: 3mm !important;
+                margin-bottom: 3mm !important;
+                font-size: 16pt !important;
+                line-height: 1.35 !important;
+            }
+            .print-card-grid {
+                gap: 0 !important;
+                padding: 0 !important;
+            }
+            .print-card {
+                border-radius: 0 !important;
+            }
+            @page {
+                size: A3 landscape;
+                margin: 5mm;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Navbar / Header (No Logos) -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 no-print shadow-sm">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-0 min-h-[4rem] flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+            
+            <!-- System Title -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <div class="bg-gutech-blue text-white p-2 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 shadow shrink-0">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-slate-900 text-xs sm:text-sm md:text-base leading-snug">نظام تصاريح سكنات الجامعة الألمانية للتكنولوجيا في عمان</h1>
+                    <p class="text-[10px] sm:text-[11px] text-slate-500 font-semibold">بوابة تسجيل الطالبات والاعتماد الفوري</p>
+                </div>
+            </div>
+
+            <!-- Lock Icon for Admin Access -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button id="btnAdminLock" onclick="promptAdminPin()" class="px-2.5 py-1.5 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 border border-slate-300 active:scale-95 touch-manipulation" title="بوابة المشرفة">
+                    <i class="fa-solid fa-lock text-amber-600 text-xs sm:text-sm"></i>
+                    <span class="text-xs font-bold">(الأدمن)</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
+
+        <!-- ================= UNIVERSITY ACCESS GATE ================= -->
+        <section id="studentAccessGate" class="max-w-lg mx-auto py-8 sm:py-16">
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-7 text-center">
+                <div class="mx-auto mb-4 bg-gutech-blue text-white w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <h2 class="text-lg sm:text-xl font-black text-slate-900">بوابة طالبات الجامعة</h2>
+                <p class="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    هذه البوابة مخصصة لطالبات الجامعة المسجلات في قائمة السكن. أدخلي رقمكِ الجامعي للمتابعة.
+                </p>
+                <form onsubmit="verifyStudentAccess(event)" class="mt-5 space-y-3 text-right">
+                    <label for="accessStudentId" class="block text-xs font-bold text-slate-700">الرقم الجامعي</label>
+                    <input type="text" id="accessStudentId" required autocomplete="username" placeholder="أدخلي الرقم الجامعي"
+                        class="w-full px-3 py-3 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none">
+                    <label for="accessCode" class="block text-xs font-bold text-slate-700">كود الدخول الخاص بكِ</label>
+                    <input type="password" id="accessCode" required autocomplete="current-password" placeholder="أدخلي كود الدخول"
+                        class="w-full px-3 py-3 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none">
+                    <button type="submit" class="w-full px-4 py-3 bg-gutech-blue hover:bg-blue-900 text-white text-sm font-bold rounded-xl transition shadow-sm">
+                        <i class="fa-solid fa-arrow-left-to-bracket ml-1"></i> دخول إلى النموذج
+                    </button>
+                    <p id="studentAccessError" class="hidden text-xs font-bold text-red-600 leading-relaxed"></p>
+                </form>
+                <p class="mt-5 text-[10px] text-slate-400">في حال عدم قبول الرقم، تواصلي مع مشرفة السكن لإضافته إلى القائمة.</p>
+            </div>
+        </section>
+
+        <!-- ================= STUDENT PORTAL VIEW ================= -->
+        <section id="portalStudent" class="hidden space-y-4 sm:space-y-6">
+            
+            <!-- CRITICAL WARNING ALERT BANNER FOR ACCURACY -->
+            <div class="bg-amber-50 border-2 border-amber-400 rounded-2xl p-3.5 sm:p-4 shadow-sm flex items-start gap-2.5 sm:gap-3 no-print">
+                <div class="bg-amber-500 text-white p-2 rounded-xl text-base sm:text-lg shrink-0 mt-0.5">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-amber-900 text-xs sm:text-sm md:text-base">تنبيه هـام جداً لطالبات السكن:</h3>
+                    <p class="text-[11px] sm:text-xs md:text-sm font-bold text-amber-800 leading-relaxed mt-0.5">
+                        يرجى التأكد من إدخال جميع البيانات والأسماء والأرقام المدنية بدقة متناهية وبدون أي أخطاء. سيتم اعتماد التصريح الرسمي واستخراج البطاقات فوراً بناءً على البيانات التي تقومين بإدخالها هنا.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Student Form Input Panel -->
+                <div class="w-full lg:w-1/3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm no-print space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-gutech-blue"></i>
+                            <span>تعبئة بيانات الطالبة</span>
+                        </h3>
+                        <button id="studentResetButton" type="button" onclick="resetForm()" class="text-xs text-slate-400 hover:text-gutech-red transition p-1 touch-manipulation">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> تفريغ الحقوق
+                        </button>
+                    </div>
+
+                    <form id="studentForm" onsubmit="handleStudentSubmit(event)" class="space-y-3.5">
+                        <!-- Student Name -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالبة الثلاثي <span class="text-red-500">*</span></label>
+                            <input type="text" id="stuName" required oninput="renderStudentPreview()" placeholder="أدخلي اسمكِ الثلاثي" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none" value="">
+                        </div>
+
+                        <!-- Civil ID & Student ID -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">الرقم المدني <span class="text-red-500">*</span></label>
+                                <input type="text" id="stuCivilId" required oninput="renderStudentPreview()" placeholder="الرقم المدني" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none" value="">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">الرقم الجامعي <span class="text-red-500">*</span></label>
+                                <input type="text" id="stuStudentId" required oninput="renderStudentPreview()" placeholder="الرقم الجامعي" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none" value="">
+                            </div>
+                        </div>
+
+                        <!-- Building Select Dropdown -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">المبنى السكني <span class="text-red-500">*</span></label>
+                            <select id="stuBuilding" onchange="renderStudentPreview()" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none bg-white">
+                                <option value="" disabled selected>اختر المبنى السكني...</option>
+                                <option value="Ahlan 2 - أهلا 2">Ahlan 2 - أهلا 2</option>
+                                <option value="Ahlan 1 - أهلا 1">Ahlan 1 - أهلا 1</option>
+                                <option value="Sahlan - سهلا">Sahlan - سهلا</option>
+                            </select>
+                        </div>
+
+                        <!-- Public Transport Bus Option -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">استخدام المواصلات العامة (الباص) <span class="text-red-500">*</span></label>
+                            <select id="stuBus" onchange="renderStudentPreview()" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none bg-white">
+                                <option value="No - لا" selected>No - لا</option>
+                                <option value="Yes - نعم">Yes - نعم</option>
+                            </select>
+                        </div>
+
+                        <!-- Vehicle Ownership Option -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">هل توجد سيارة في السكن؟ <span class="text-red-500">*</span></label>
+                                <select id="stuHasCar" onchange="toggleCarPlateField(); renderStudentPreview();" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none bg-white">
+                                    <option value="No - لا" selected>No - لا</option>
+                                    <option value="Yes - نعم">Yes - نعم</option>
+                                </select>
+                            </div>
+
+                            <div id="stuCarPlateBox" class="hidden">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">رقم لوحة السيارة</label>
+                                <input type="text" id="stuCarPlate" oninput="renderStudentPreview()" placeholder="مثال: 0000 أ ب" class="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-gutech-blue focus:outline-none" value="">
+                            </div>
+                        </div>
+
+                        <!-- Section: Authorized Persons (Up to 16) -->
+                        <div class="border-t border-slate-200 pt-3 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-users text-emerald-600"></i>
+                                        <span>الأشخاص المصرح لهم بالاستلام</span>
+                                    </h4>
+                                    <p class="text-[10px] text-slate-500">إضافة من 1 وحتى 16 شخصاً مصرحاً له</p>
+                                </div>
+                                <span id="authCountBadge" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                                    0 / 16
+                                </span>
+                            </div>
+
+                            <!-- Input Row for adding new Authorized Person -->
+                            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <input type="text" id="newAuthName" placeholder="اسم المصرح له الثلاثي" class="w-full px-2.5 py-2 sm:py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                                    <input type="text" id="newAuthCivilId" placeholder="الرقم المدني" class="w-full px-2.5 py-2 sm:py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-2">
+                                    <input type="text" id="newAuthRelation" placeholder="صلة القرابة (الأب/الأم/الأخ...)" class="flex-1 px-2.5 py-2 sm:py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                                    <button type="button" onclick="addAuthorizedPerson()" class="w-full sm:w-auto px-4 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 shadow-sm shrink-0 active:scale-95 touch-manipulation">
+                                        <i class="fa-solid fa-plus"></i>
+                                        <span>إضافة</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- List of Added Authorized Persons -->
+                            <div id="authPersonsList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                <!-- Populated dynamically with JavaScript -->
+                            </div>
+                            <input id="cardImageUpload" type="file" accept="image/*" class="hidden" onchange="handleCardImageUpload(event)">
+                        </div>
+
+                        <!-- Form Submit Action -->
+                        <button type="submit" class="w-full py-3.5 sm:py-3 bg-gutech-blue hover:bg-blue-900 active:scale-95 touch-manipulation text-white font-bold text-sm rounded-xl transition shadow-md flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>حفظ واعتماد التصريح النهائي</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Student Live Permit Document Preview Panel -->
+                <div class="flex-1 flex flex-col items-center w-full min-w-0">
+                    <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 no-print">
+                        <span class="text-xs font-bold text-slate-500">معاينة ورقة التصريح الرسمية (قياس A3 الأفقِي):</span>
+                        <button onclick="printSingleCurrentPermit()" class="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 bg-slate-800 text-white hover:bg-black rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow active:scale-95 touch-manipulation">
+                            <i class="fa-solid fa-print"></i>
+                            <span>طباعة تصريح الطالبة الحالية (A3)</span>
+                        </button>
+                    </div>
+
+                    <!-- Scroll wrapper for clean display on phones -->
+                    <div class="preview-scroll-container">
+                        <!-- Single Permit Sheet Document Canvas (Strictly A3 Landscape Rules) -->
+                        <div id="singlePermitView" class="permit-sheet permit-page-break bg-white w-full min-w-[650px] lg:min-w-0 max-w-[1100px] p-4 sm:p-6 md:p-8 rounded-2xl shadow-md border border-slate-300">
+                            
+                            <!-- FIXED TITLE ONLY (NO LOGOS) -->
+                            <div class="text-right pb-3 mb-4 border-b-2 border-slate-800">
+                                <h2 class="text-gutech-red font-black text-lg sm:text-2xl md:text-3xl leading-tight">
+                                    تصاريح سكنات الجامعة الألمانية للتكنولوجيا في عمان
+                                </h2>
+                            </div>
+
+                            <!-- STUDENT DATA HEADER BAR -->
+                            <div class="print-student-data bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-300 mb-4">
+                                <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2.5 text-sm sm:text-base font-black text-slate-900">
+                                    <div class="flex items-center gap-2 col-span-2 sm:col-span-1">
+                                        <span class="text-gutech-red shrink-0">اسم الطالبة:</span>
+                                        <span id="pvName" class="text-slate-900 font-extrabold truncate">________________</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gutech-blue shrink-0">الرقم المدني:</span>
+                                        <span id="pvCivilId" class="font-mono text-slate-800">________</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gutech-blue shrink-0">الرقم الجامعي:</span>
+                                        <span id="pvStudentId" dir="ltr" class="font-mono text-slate-800" style="direction:ltr; unicode-bidi:plaintext; display:inline-block;">________</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-emerald-700 shrink-0">المبنى السكني:</span>
+                                        <span id="pvBuilding" class="text-emerald-800 font-bold truncate">________</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-700 shrink-0">المواصلات (الباص):</span>
+                                        <span id="pvBus" class="text-slate-900">No - لا</span>
+                                    </div>
+                                    <div id="pvCarBox" class="hidden flex items-center gap-2 text-purple-900">
+                                        <span class="shrink-0">سيارة السكن:</span>
+                                        <span id="pvCarPlate" class="bg-purple-100 px-2 py-0.5 rounded border border-purple-300 font-mono text-xs">________</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Subheading for 4x4 Grid -->
+                            <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-address-card text-emerald-600"></i>
+                                    <span>بطاقات الأشخاص المصرح لهم بالاستلام:</span>
+                                </span>
+                                <span id="pvAuthPersonsSummary" class="text-xs font-bold text-slate-500">
+                                    عدد المصرح لهم: 0 / 16
+                                </span>
+                            </div>
+
+                            <!-- 16 ID CARDS GRID (4x4) FIT FOR A3 LANDSCAPE PAGE -->
+                            <div id="pvCardsGrid" class="print-card-grid bg-slate-100 p-2.5 sm:p-3 rounded-xl">
+                                <!-- JavaScript generates the available cards -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= ADMIN PORTAL VIEW (Locked behind PIN) ================= -->
+        <section id="portalAdmin" class="space-y-4 sm:space-y-6 hidden no-print">
+            
+            <div class="bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl flex items-center justify-between shadow-md">
+                <div class="flex items-center gap-2.5 sm:gap-3">
+                    <div class="bg-amber-500 text-slate-900 p-2 rounded-xl font-bold shrink-0">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-xs sm:text-base">(الأدمن)</h2>
+                        <p class="text-[10px] sm:text-xs text-slate-400">إدارة الطلبات، تحكم قائمة المصرح لهن بالتسجيل (Whitelist)، وتصدير وطباعة A3</p>
+                    </div>
+                </div>
+                <button onclick="exitAdminPortal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition border border-slate-700 shrink-0 touch-manipulation">
+                    <i class="fa-solid fa-right-from-bracket"></i> الخروج
+                </button>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-bold text-slate-400">إجمالي الطالبات</p>
+                        <h3 id="statTotal" class="text-xl sm:text-2xl font-black text-slate-800 mt-0.5 sm:mt-1">0</h3>
+                    </div>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-gutech-blue flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-bold text-slate-400">المسموح لهن (Whitelist)</p>
+                        <h3 id="statAllowedCount" class="text-sm sm:text-xl md:text-2xl font-black text-emerald-600 mt-0.5 sm:mt-1 truncate">غير مفعّلة</h3>
+                    </div>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-bold text-slate-400">سيارات بالسكن</p>
+                        <h3 id="statCars" class="text-xl sm:text-2xl font-black text-purple-600 mt-0.5 sm:mt-1">0</h3>
+                    </div>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
+                        <i class="fa-solid fa-car"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-bold text-slate-400">مستخدمات الباص</p>
+                        <h3 id="statBuses" class="text-xl sm:text-2xl font-black text-amber-600 mt-0.5 sm:mt-1">0</h3>
+                    </div>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
+                        <i class="fa-solid fa-bus"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN CONTROL: WHITELIST MANAGEMENT (Excel Upload / Allowed Students) -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border-2 border-emerald-500/30 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                            <i class="fa-solid fa-file-excel"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-slate-900 text-xs sm:text-base">التحكم في الأشخاص المسموح لهم بتعبئة الرابط (قائمة الإكسل)</h3>
+                            <p class="text-[10px] sm:text-xs text-slate-500">ارفعي ملف إكسل يحتوي على الأرقام الجامعية أو المدنية المسموح لهن فقط بالتسجيل</p>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Enable Whitelist -->
+                    <div class="flex items-center justify-between sm:justify-end gap-3 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                        <span class="text-xs font-bold text-slate-700">تفعيل حصر التسجيل:</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggleWhitelist" onchange="toggleWhitelistState()" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                    <!-- Option 1: Upload Excel File -->
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                        <label class="block text-xs font-bold text-slate-700">رفع ملف Excel بالمسموح لهن:</label>
+                        <input type="file" id="excelWhitelistInput" accept=".xlsx, .xls, .csv" onchange="handleWhitelistExcelUpload(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer">
+                        <p class="text-[10px] text-slate-400">الأعمدة: StudentId, AccessCode, StudentName, CivilId, Active.</p>
+                    </div>
+
+                    <!-- Option 2: Manual Text Addition -->
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                        <label class="block text-xs font-bold text-slate-700">إضافة طالبة: الرقم، الكود، الاسم</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="manualAllowedInput" placeholder="الرقم|الكود|الاسم|المدني" class="flex-1 px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none">
+                            <button onclick="addManualAllowedIds()" class="px-3 py-1.5 bg-slate-800 text-white font-bold text-xs rounded-lg hover:bg-black transition touch-manipulation">إضافة</button>
+                        </div>
+                    </div>
+
+                    <!-- Option 3: Whitelist Status & Clear Button -->
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex flex-col justify-between gap-2">
+                        <div>
+                            <span class="text-xs font-bold text-slate-600 block">إجمالي الأرقام المصرح لها حالياً:</span>
+                            <span id="allowedIdsCountText" class="text-base sm:text-lg font-black text-emerald-700">0 رقم</span>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button onclick="clearAllowedIds()" class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition touch-manipulation">
+                                <i class="fa-solid fa-trash"></i> مسح القائمة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Table Toolbar -->
+            <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
+                
+                <div class="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto">
+                    <!-- Filter Building -->
+                    <select id="filterBuilding" onchange="filterAndRenderAdminTable()" class="w-full sm:w-auto px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl focus:outline-none bg-slate-50 font-bold">
+                        <option value="ALL">جميع المباني</option>
+                        <option value="Ahlan 1 - أهلا 1">Ahlan 1 - أهلا 1</option>
+                        <option value="Ahlan 2 - أهلا 2">Ahlan 2 - أهلا 2</option>
+                        <option value="Sahlan - سهلا">Sahlan - سهلا</option>
+                    </select>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="adminSearch" oninput="filterAndRenderAdminTable()" placeholder="بحث باسم الطالبة أو الرقم..." class="w-full pr-8 pl-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Export Action Buttons -->
+                <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap sm:flex-nowrap">
+                    <button onclick="exportToExcelSheet()" class="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow flex items-center justify-center gap-1.5 touch-manipulation">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>تصدير Excel</span>
+                    </button>
+
+                    <button onclick="printAllPermitsBulk()" class="flex-1 sm:flex-none px-3.5 py-2 bg-gutech-blue hover:bg-blue-900 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow flex items-center justify-center gap-1.5 touch-manipulation">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>طباعة كافة التصاريح (A3)</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Admin Records Table -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse min-w-[650px]">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-black text-slate-600 uppercase">
+                                <th class="p-3">الطالبة</th>
+                                <th class="p-3">الرقم المدني</th>
+                                <th class="p-3">الرقم الجامعي</th>
+                                <th class="p-3">المبنى</th>
+                                <th class="p-3">الباص</th>
+                                <th class="p-3">السيارة</th>
+                                <th class="p-3">التاريخ</th>
+                                <th class="p-3 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- BULK PRINT CONTAINER (A3 Landscape PDF Print Generation) -->
+    <div id="bulkPrintContainer" class="hidden print-only">
+        <!-- JS populates pages for all students -->
+    </div>
+
+    <!-- Admin Security PIN Modal -->
+    <div id="adminPinModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3.5 hidden no-print backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-5 sm:p-6 text-center space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 mx-auto flex items-center justify-center text-xl font-bold shrink-0">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-900 text-base">دخول المشرفة</h3>
+                <p class="text-xs text-slate-500 mt-1">أدخل الرمز السرّي</p>
+            </div>
+            <div>
+                <input type="password" id="adminPinInput" maxlength="30" placeholder="أدخل الرمز السرّي" class="w-full text-center text-xl sm:text-2xl font-mono tracking-widest px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <p id="pinErrorMsg" class="text-xs text-red-600 font-bold mt-1 hidden">رمز المرور غير صحيح!</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="closeAdminPinModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition touch-manipulation">إلغاء</button>
+                <button type="button" onclick="verifyAdminPin()" class="w-1/2 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition shadow touch-manipulation">دخول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Data Modal (Admin) -->
+    <div id="editStudentModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3.5 hidden no-print backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b pb-3">
+                <div class="flex items-center gap-2 text-slate-900 font-bold text-sm sm:text-base">
+                    <i class="fa-solid fa-user-pen text-amber-600 text-lg"></i>
+                    <h3>تعديل بيانات الطالبة</h3>
+                </div>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1 touch-manipulation">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="editForm" onsubmit="saveEditedRecord(event)" class="space-y-3">
+                <input type="hidden" id="editStuId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالبة الثلاثي</label>
+                    <input type="text" id="editStuName" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الرقم المدني</label>
+                        <input type="text" id="editStuCivilId" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الرقم الجامعي</label>
+                        <input type="text" id="editStuStudentId" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">المبنى السكني</label>
+                    <select id="editStuBuilding" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                        <option value="Ahlan 2 - أهلا 2">Ahlan 2 - أهلا 2</option>
+                        <option value="Ahlan 1 - أهلا 1">Ahlan 1 - أهلا 1</option>
+                        <option value="Sahlan - سهلا">Sahlan - سهلا</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">المواصلاات (الباص)</label>
+                        <select id="editStuBus" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                            <option value="Yes - نعم">Yes - نعم</option>
+                            <option value="No - لا">No - لا</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">سيارة في السكن</label>
+                        <select id="editStuHasCar" onchange="toggleEditCarPlate()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
+                            <option value="No - لا">No - لا</option>
+                            <option value="Yes - نعم">Yes - نعم</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="editCarPlateBox" class="hidden">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم لوحة السيارة</label>
+                    <input type="text" id="editStuCarPlate" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" onclick="closeEditModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition touch-manipulation">إلغاء</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition shadow touch-manipulation">حفظ التغييرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Live Smart Camera Capture Modal -->
+    <div id="cameraModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-3 sm:p-4 hidden no-print backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-5 space-y-3.5 sm:space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b pb-2.5">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-camera-retro text-emerald-600 text-base sm:text-lg"></i>
+                    <h3 class="font-bold text-slate-900 text-sm sm:text-base">تصوير البطاقة الشخصية عبر الكاميرا</h3>
+                </div>
+                <button onclick="closeCameraModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1 touch-manipulation">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="relative w-full aspect-[4/3] bg-black rounded-xl overflow-hidden flex items-center justify-center">
+                <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                
+                <div id="cardFrameGuide" class="absolute w-[82%] h-[52%] border-2 border-dashed border-emerald-400 rounded-lg card-frame-active flex flex-col justify-between p-2 pointer-events-none">
+                    <div class="flex justify-between">
+                        <div class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-t-2 border-l-2 border-emerald-400"></div>
+                        <div class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-t-2 border-r-2 border-emerald-400"></div>
+                    </div>
+                    <div class="text-center">
+                        <span id="cardDetectStatus" class="bg-black/60 text-emerald-300 text-[10px] sm:text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">
+                            ضع البطاقة داخل الإطار المخصص...
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <div class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-b-2 border-l-2 border-emerald-400"></div>
+                        <div class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-b-2 border-r-2 border-emerald-400"></div>
+                    </div>
+                </div>
+
+                <canvas id="captureCanvas" class="hidden"></canvas>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-1">
+                <div class="flex items-center gap-2 text-xs text-slate-500 w-full sm:w-auto">
+                    <input type="checkbox" id="autoCaptureToggle" checked class="rounded text-emerald-600">
+                    <label for="autoCaptureToggle">التقاط وقص تلقائي عند تحديد الحدود</label>
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button type="button" onclick="closeCameraModal()" class="w-1/2 sm:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition touch-manipulation">
+                        إلغاء
+                    </button>
+                    <button type="button" onclick="manualCaptureCard()" class="w-1/2 sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow touch-manipulation">
+                        <i class="fa-solid fa-circle-dot"></i>
+                        <span>التقاط الآن</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Footer -->
+    <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500 no-print">
+        تصاريح سكنات الجامعة الألمانية للتكنولوجيا في عمان
+    </footer>
+
+    <script>
+        const API_BASE = '';
+
+        let permitRecords = [];
+        let currentAuthPersons = []; // Empty array by default!
+        let allowedStudentIds = []; // Whitelist allowed IDs
+        let isWhitelistActive = true;
+        let authenticatedStudentId = '';
+        let studentPermitLocked = false;
+
+        let activeCaptureIndex = null;
+        let mediaStream = null;
+        let detectionInterval = null;
+        let isCaptured = false;
+
+        async function saveRecords() {
+            const response = await fetch(`${API_BASE}/api/admin/permits/snapshot`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ records: permitRecords })
+            });
+            if (!response.ok) throw new Error('تعذر حفظ التصاريح');
+            updateAdminDashboard();
+        }
+
+        function promptAdminPin() {
+            document.getElementById('adminPinModal').classList.remove('hidden');
+            document.getElementById('adminPinInput').value = '';
+            document.getElementById('pinErrorMsg').classList.add('hidden');
+            document.getElementById('adminPinInput').focus();
+        }
+
+        async function verifyAdminPin() {
+            const pin = document.getElementById('adminPinInput').value.trim();
+            const response = await fetch(`${API_BASE}/api/admin/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ password: pin })
+            });
+            if (response.ok) {
+                closeAdminPinModal();
+                document.getElementById('studentAccessGate').classList.add('hidden');
+                document.getElementById('portalStudent').classList.add('hidden');
+                document.getElementById('portalAdmin').classList.remove('hidden');
+                await loadAdminData();
+                updateAdminDashboard();
+                filterAndRenderAdminTable();
+            } else {
+                document.getElementById('pinErrorMsg').classList.remove('hidden');
+            }
+        }
+
+        function closeAdminPinModal() {
+            document.getElementById('adminPinModal').classList.add('hidden');
+        }
+
+        function exitAdminPortal() {
+            document.getElementById('portalAdmin').classList.add('hidden');
+            document.getElementById('studentAccessGate').classList.remove('hidden');
+            document.getElementById('portalStudent').classList.add('hidden');
+        }
+
+        function normalizeStudentId(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        async function verifyStudentAccess(event) {
+            event.preventDefault();
+
+            const enteredId = normalizeStudentId(document.getElementById('accessStudentId').value);
+            const accessCode = document.getElementById('accessCode').value;
+            const errorEl = document.getElementById('studentAccessError');
+            const response = await fetch(`${API_BASE}/api/student/access`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ studentId: enteredId, accessCode })
+            });
+
+            if (response.status === 409) {
+                errorEl.textContent = 'تم اعتماد تصريحكِ مسبقًا. لا يمكن تعديله إلا بعد أن تحذفه المشرفة.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (!response.ok) {
+                errorEl.textContent = 'الرقم الجامعي أو كود الدخول غير صحيح.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const student = await response.json();
+            authenticatedStudentId = enteredId;
+            document.getElementById('stuName').value = student.studentName;
+            document.getElementById('stuStudentId').value = enteredId;
+            document.getElementById('stuStudentId').readOnly = true;
+            errorEl.classList.add('hidden');
+            document.getElementById('studentAccessGate').classList.add('hidden');
+            document.getElementById('portalStudent').classList.remove('hidden');
+            renderStudentPreview();
+        }
+
+        function toggleCarPlateField() {
+            const val = document.getElementById('stuHasCar').value;
+            const box = document.getElementById('stuCarPlateBox');
+            if (val.includes('Yes') || val.includes('نعم')) {
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        // SVG Placeholder Generator for Authorized Persons
+        function generateSampleOmanID(name, civilId, relation) {
+            const svgString = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="100%" height="100%">
+                <rect width="320" height="200" rx="10" fill="#fcfdfd" stroke="#cbd5e1" stroke-width="2"/>
+                <rect width="320" height="24" fill="#047857" opacity="0.1"/>
+                <path d="M0,30 Q80,10 160,30 T320,30 L320,0 L0,0 Z" fill="#059669" opacity="0.15"/>
+                <text x="160" y="16" font-family="'Cairo', sans-serif" font-weight="700" font-size="10" fill="#065f46" text-anchor="middle">سَلْطَنَة عُمان - SULTANATE OF OMAN</text>
+                
+                <text x="210" y="42" font-family="'Cairo', sans-serif" font-weight="800" font-size="11" fill="#1e293b">تصريح استلام طالبة</text>
+                <text x="110" y="42" font-family="'Inter', sans-serif" font-weight="700" font-size="9" fill="#047857">${relation ? relation : 'شخص مصرح له'}</text>
+
+                <rect x="235" y="55" width="70" height="85" rx="5" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+                <circle cx="270" cy="85" r="18" fill="#64748b"/>
+                <path d="M245,130 C245,108 295,108 295,130 Z" fill="#64748b"/>
+
+                <text x="225" y="65" font-family="'Cairo', sans-serif" font-size="7" fill="#64748b" text-anchor="end">الرقم المدني</text>
+                <text x="225" y="83" font-family="'Cairo', sans-serif" font-weight="700" font-size="9" fill="#0f172a" text-anchor="end">${civilId || '________'}</text>
+
+                <text x="225" y="100" font-family="'Cairo', sans-serif" font-size="7" fill="#64748b" text-anchor="end">الصفة / القرابة</text>
+                <text x="225" y="117" font-family="'Cairo', sans-serif" font-weight="600" font-size="8" fill="#334155" text-anchor="end">${relation || 'مصرح له'}</text>
+
+                <text x="225" y="134" font-family="'Cairo', sans-serif" font-size="7" fill="#64748b" text-anchor="end">الاسم</text>
+                <text x="225" y="148" font-family="'Cairo', sans-serif" font-weight="700" font-size="8.5" fill="#047857" text-anchor="end">${name || 'شخص مصرح له'}</text>
+
+                <path d="M15,140 Q35,120 50,150 T20,195 Z" fill="#059669" opacity="0.8"/>
+                <rect x="25" y="85" width="28" height="22" rx="3" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+            </svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgString);
+        }
+
+        async function loadAdminData() {
+            const response = await fetch(`${API_BASE}/api/admin/data`, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error('تعذر تحميل بيانات الإدارة');
+            const data = await response.json();
+            permitRecords = data.records || [];
+            allowedStudentIds = (data.students || []).filter(student => student.active).map(student => student.studentId);
+            isWhitelistActive = true;
+            updateAdminWhitelistUI();
+        }
+
+        async function initStorage() {
+            permitRecords = [];
+            allowedStudentIds = [];
+            currentAuthPersons = []; // Completely clean & empty on load
+            renderAuthPersonsList();
+            updateAdminWhitelistUI();
+        }
+
+        /* Whitelist / Excel Control Functions */
+        function toggleWhitelistState() {
+            isWhitelistActive = true;
+            document.getElementById('toggleWhitelist').checked = true;
+        }
+
+        function updateAdminWhitelistUI() {
+            document.getElementById('toggleWhitelist').checked = isWhitelistActive;
+            const countText = `${allowedStudentIds.length} رقم مصرح له`;
+            document.getElementById('allowedIdsCountText').textContent = countText;
+            
+            const statEl = document.getElementById('statAllowedCount');
+            if (isWhitelistActive) {
+                statEl.textContent = `${allowedStudentIds.length} طالبة (مفعّلة)`;
+                statEl.className = "text-2xl font-black text-emerald-600 mt-1";
+            } else {
+                statEl.textContent = "غير مفعّلة (الجميع)";
+                statEl.className = "text-2xl font-black text-slate-400 mt-1";
+            }
+        }
+
+        function handleWhitelistExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    const students = rows.slice(1).filter(row => row && row[0] && row[1]).map(row => ({
+                        studentId: String(row[0]).trim(),
+                        accessCode: String(row[1]).trim(),
+                        name: String(row[2] || '').trim(),
+                        civilId: String(row[3] || '').trim(),
+                        active: row[4] === undefined || String(row[4]).toLowerCase() !== 'لا'
+                    }));
+
+                    if (students.length > 0) {
+                        await Promise.all(students.map(student => fetch(`${API_BASE}/api/admin/students`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify(student)
+                        })));
+                        await loadAdminData();
+                        alert(`تمت إضافة ${students.length} طالبة بنجاح.`);
+                    } else {
+                        alert('يجب أن يحتوي الملف على الرقم الجامعي وكود الدخول في العمودين الأول والثاني.');
+                    }
+                } catch(err) {
+                    alert('حدث خطأ أثناء قراءة ملف الإكسل. يرجى التأكد من صحة الملف.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function addManualAllowedIds() {
+            const input = document.getElementById('manualAllowedInput');
+            const val = input.value.trim();
+            if (!val) return;
+
+            const [studentId, accessCode, name, civilId] = val.split('|').map(s => s.trim());
+            if (!studentId || !accessCode || !name) {
+                alert('استخدمي الصيغة: الرقم الجامعي|كود الدخول|اسم الطالبة|الرقم المدني');
+                return;
+            }
+            const response = await fetch(`${API_BASE}/api/admin/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ studentId, accessCode, name, civilId, active: true })
+            });
+            if (!response.ok) {
+                alert('تعذر إضافة الطالبة.');
+                return;
+            }
+            await loadAdminData();
+            input.value = '';
+            alert('تمت إضافة الطالبة بنجاح.');
+        }
+
+        async function clearAllowedIds() {
+            if (confirm('هل أنتِ متأكدة من مسح قائمة الأرقام المسموح لها بالتسجيل؟')) {
+                await fetch(`${API_BASE}/api/admin/students`, { method: 'DELETE', credentials: 'same-origin' });
+                await loadAdminData();
+            }
+        }
+
+        function addAuthorizedPerson() {
+            if (currentAuthPersons.length >= 16) {
+                alert('الحد الأقصى المسموح به هو 16 شخصاً مصرحاً له فقط!');
+                return;
+            }
+
+            const nameInput = document.getElementById('newAuthName');
+            const civilIdInput = document.getElementById('newAuthCivilId');
+            const relationInput = document.getElementById('newAuthRelation');
+
+            const name = nameInput.value.trim();
+            const civilId = civilIdInput.value.trim();
+            const relation = relationInput.value.trim();
+
+            if (!name || !civilId) {
+                alert('يرجى إدخال اسم المصرح له والرقم المدني على الأقل.');
+                return;
+            }
+
+            currentAuthPersons.push({
+                name: name,
+                civilId: civilId,
+                relation: relation || 'مصرح له',
+                cardImg: null
+            });
+
+            nameInput.value = '';
+            civilIdInput.value = '';
+            relationInput.value = '';
+
+            renderAuthPersonsList();
+            renderStudentPreview();
+        }
+
+        function removeAuthorizedPerson(index) {
+            currentAuthPersons.splice(index, 1);
+            renderAuthPersonsList();
+            renderStudentPreview();
+        }
+
+        function renderAuthPersonsList() {
+            const listEl = document.getElementById('authPersonsList');
+            const badgeEl = document.getElementById('authCountBadge');
+            badgeEl.textContent = `${currentAuthPersons.length} / 16`;
+
+            listEl.innerHTML = '';
+
+            if (currentAuthPersons.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-2.5 text-xs text-slate-400 font-bold bg-slate-50 rounded-lg">لم يتم إضافة أشخاص مصرح لهم بعد</div>`;
+                return;
+            }
+
+            currentAuthPersons.forEach((person, idx) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs shadow-sm";
+                item.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0">${idx + 1}</span>
+                        <div class="truncate">
+                            <p class="font-bold text-slate-800 truncate">${person.name}</p>
+                            <p class="text-[10px] text-slate-500 font-mono">${person.civilId} | ${person.relation}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" onclick="openCameraForPerson(${idx})" title="تصوير البطاقة" class="p-1 px-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[11px] font-bold border border-emerald-200 transition flex items-center gap-1">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>${person.cardImg ? 'تم المصورة' : 'تصوير'}</span>
+                        </button>
+                        <button type="button" onclick="openImageUploadForPerson(${idx})" title="رفع صورة البطاقة" class="p-1 px-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[11px] font-bold border border-blue-200 transition flex items-center gap-1">
+                            <i class="fa-solid fa-image"></i>
+                            <span>رفع</span>
+                        </button>
+                        <button type="button" onclick="removeAuthorizedPerson(${idx})" class="p-1 text-slate-400 hover:text-red-600 rounded transition">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        function renderStudentPreview() {
+            const name = document.getElementById('stuName').value || "________________";
+            const civilId = document.getElementById('stuCivilId').value || "________";
+            const studentId = document.getElementById('stuStudentId').value || "________";
+            const building = document.getElementById('stuBuilding').value || "________";
+            const bus = document.getElementById('stuBus').value || "No - لا";
+            const hasCar = document.getElementById('stuHasCar').value || "No - لا";
+            const carPlate = document.getElementById('stuCarPlate').value || "________";
+
+            document.getElementById('pvName').textContent = name;
+            document.getElementById('pvCivilId').textContent = civilId;
+            document.getElementById('pvStudentId').textContent = studentId;
+            document.getElementById('pvBuilding').textContent = building;
+            document.getElementById('pvBus').textContent = bus;
+
+            const carBox = document.getElementById('pvCarBox');
+            if (hasCar.includes('Yes') || hasCar.includes('نعم')) {
+                carBox.classList.remove('hidden');
+                document.getElementById('pvCarPlate').textContent = carPlate;
+            } else {
+                carBox.classList.add('hidden');
+            }
+
+            document.getElementById('pvAuthPersonsSummary').textContent = `عدد المصرح لهم: ${currentAuthPersons.length} / 16`;
+
+            // Populate 16-card grid with authorized persons
+            const grid = document.getElementById('pvCardsGrid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < 16; i++) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = "bg-white border border-slate-300 rounded-lg p-1 shadow-sm flex flex-col items-center justify-between overflow-hidden relative min-h-[95px]";
+
+                if (i < currentAuthPersons.length) {
+                    const p = currentAuthPersons[i];
+                    const imgSrc = p.cardImg ? p.cardImg : generateSampleOmanID(p.name, p.civilId, p.relation);
+                    cardDiv.innerHTML = `
+                        <img src="${imgSrc}" class="w-full h-auto object-contain rounded" alt="${p.name}">
+                        <div class="w-full text-center bg-slate-50 border-t border-slate-200 py-0.5 px-1 truncate text-[9px] font-bold text-slate-800">
+                            #${i + 1} ${p.name}
+                        </div>
+                    `;
+                } else {
+                    cardDiv.className += " border-dashed border-slate-300 bg-slate-50/50 flex items-center justify-center text-slate-300";
+                    cardDiv.innerHTML = `
+                        <div class="text-center p-2">
+                            <span class="block text-[10px] font-bold text-slate-400">خانة فارغة (#${i + 1})</span>
+                        </div>
+                    `;
+                }
+                grid.appendChild(cardDiv);
+            }
+        }
+
+        async function handleStudentSubmit(e) {
+            e.preventDefault();
+
+            const studentIdVal = document.getElementById('stuStudentId').value.trim();
+            const civilIdVal = document.getElementById('stuCivilId').value.trim();
+
+            if (!authenticatedStudentId || normalizeStudentId(studentIdVal) !== authenticatedStudentId) {
+                alert('انتهت جلسة الدخول. يرجى تسجيل الدخول بالرقم الجامعي مرة أخرى.');
+                document.getElementById('studentAccessGate').classList.remove('hidden');
+                document.getElementById('portalStudent').classList.add('hidden');
+                return;
+            }
+
+            if (currentAuthPersons.length === 0) {
+                alert('يرجى إضافة شخص مصرح له واحد على الأقل.');
+                return;
+            }
+
+            const newRecord = {
+                id: 'REC-' + Date.now().toString().slice(-5),
+                name: document.getElementById('stuName').value,
+                civilId: civilIdVal,
+                studentId: studentIdVal,
+                building: document.getElementById('stuBuilding').value,
+                bus: document.getElementById('stuBus').value,
+                hasCar: document.getElementById('stuHasCar').value,
+                carPlate: document.getElementById('stuCarPlate').value,
+                authorizedPersons: JSON.parse(JSON.stringify(currentAuthPersons)),
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            const response = await fetch(`${API_BASE}/api/student/permits`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(newRecord)
+            });
+            if (!response.ok) {
+                if (response.status === 409) {
+                    lockStudentPermit();
+                    alert('تم اعتماد التصريح مسبقًا ولا يمكن تعديله إلا بعد أن تحذفه المشرفة.');
+                    return;
+                }
+                alert('تعذر حفظ التصريح. يرجى المحاولة مرة أخرى.');
+                return;
+            }
+            lockStudentPermit();
+            alert('تم اعتماد وحفظ التصريح بنجاح!');
+        }
+
+        function lockStudentPermit() {
+            studentPermitLocked = true;
+            const form = document.getElementById('studentForm');
+            form.querySelectorAll('input, select, button').forEach((control) => {
+                control.disabled = true;
+            });
+            document.getElementById('studentResetButton').disabled = true;
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<i class="fa-solid fa-lock"></i><span>تم اعتماد التصريح ونهائي</span>';
+            submitButton.classList.remove('bg-gutech-blue', 'hover:bg-blue-900');
+            submitButton.classList.add('bg-slate-400', 'cursor-not-allowed');
+        }
+
+        function resetForm() {
+            document.getElementById('studentForm').reset();
+            currentAuthPersons = [];
+            toggleCarPlateField();
+            renderAuthPersonsList();
+            renderStudentPreview();
+        }
+
+        function openCameraForPerson(index) {
+            activeCaptureIndex = index;
+            openCameraModal();
+        }
+
+        function openImageUploadForPerson(index) {
+            activeCaptureIndex = index;
+            const input = document.getElementById('cardImageUpload');
+            input.value = '';
+            input.click();
+        }
+
+        function handleCardImageUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file || activeCaptureIndex === null) return;
+            if (!file.type.startsWith('image/')) {
+                alert('يرجى اختيار ملف صورة صالح.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const image = new Image();
+                image.onload = () => {
+                    const sourceCanvas = document.createElement('canvas');
+                    sourceCanvas.width = image.naturalWidth;
+                    sourceCanvas.height = image.naturalHeight;
+                    sourceCanvas.getContext('2d').drawImage(image, 0, 0);
+                    const corners = detectCardCorners(sourceCanvas);
+                    const outputCanvas = corners ? warpCardToCanvas(sourceCanvas, corners) : cropCanvasToGuide(sourceCanvas);
+                    if (currentAuthPersons[activeCaptureIndex]) {
+                        currentAuthPersons[activeCaptureIndex].cardImg = outputCanvas.toDataURL('image/jpeg', 0.92);
+                    }
+                    activeCaptureIndex = null;
+                    renderAuthPersonsList();
+                    renderStudentPreview();
+                };
+                image.onerror = () => alert('تعذر قراءة الصورة.');
+                image.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function printSingleCurrentPermit() {
+            window.print();
+        }
+
+        function updateAdminDashboard() {
+            document.getElementById('statTotal').textContent = permitRecords.length;
+            document.getElementById('statCars').textContent = permitRecords.filter(r => r.hasCar && r.hasCar.includes('Yes')).length;
+            document.getElementById('statBuses').textContent = permitRecords.filter(r => r.bus && r.bus.includes('Yes')).length;
+            updateAdminWhitelistUI();
+        }
+
+        function filterAndRenderAdminTable() {
+            const buildingFilter = document.getElementById('filterBuilding').value;
+            const searchQuery = document.getElementById('adminSearch').value.toLowerCase();
+
+            const filtered = permitRecords.filter(r => {
+                const matchBuilding = buildingFilter === 'ALL' || r.building === buildingFilter;
+                const matchSearch = (r.name && r.name.toLowerCase().includes(searchQuery)) || 
+                                    (r.civilId && r.civilId.includes(searchQuery)) || 
+                                    (r.studentId && r.studentId.includes(searchQuery));
+                return matchBuilding && matchSearch;
+            });
+
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 font-bold">لا توجد سجلات مطابقة للبحث</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="p-3.5 font-bold text-slate-900">${r.name}</td>
+                    <td class="p-3.5 font-mono">${r.civilId}</td>
+                    <td class="p-3.5 font-mono text-gutech-blue">${r.studentId}</td>
+                    <td class="p-3.5 font-bold text-emerald-700">${r.building}</td>
+                    <td class="p-3.5">${r.bus}</td>
+                    <td class="p-3.5">${r.hasCar && r.hasCar.includes('Yes') ? `<span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold border border-purple-200">${r.carPlate || 'نعم'}</span>` : 'لا'}</td>
+                    <td class="p-3.5 text-slate-500 text-xs">${r.date}</td>
+                    <td class="p-3.5 text-center space-x-2 space-x-reverse">
+                        <button onclick="editRecord('${r.id}')" title="تعديل البيانات" class="p-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="printIndividualStudentPermit('${r.id}')" title="طباعة التصريح (A3)" class="p-1.5 bg-gutech-blue text-white rounded-lg hover:bg-blue-900 transition">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+                        <button onclick="deleteRecord('${r.id}')" title="حذف" class="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editRecord(id) {
+            const record = permitRecords.find(r => r.id === id);
+            if (!record) return;
+
+            document.getElementById('editStuId').value = record.id;
+            document.getElementById('editStuName').value = record.name;
+            document.getElementById('editStuCivilId').value = record.civilId;
+            document.getElementById('editStuStudentId').value = record.studentId;
+            document.getElementById('editStuBuilding').value = record.building;
+            document.getElementById('editStuBus').value = record.bus;
+            document.getElementById('editStuHasCar').value = record.hasCar || "No - لا";
+            document.getElementById('editStuCarPlate').value = record.carPlate || "";
+
+            toggleEditCarPlate();
+            document.getElementById('editStudentModal').classList.remove('hidden');
+        }
+
+        function toggleEditCarPlate() {
+            const val = document.getElementById('editStuHasCar').value;
+            const box = document.getElementById('editCarPlateBox');
+            if (val.includes('Yes') || val.includes('نعم')) {
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editStudentModal').classList.add('hidden');
+        }
+
+        function saveEditedRecord(e) {
+            e.preventDefault();
+            const id = document.getElementById('editStuId').value;
+            const index = permitRecords.findIndex(r => r.id === id);
+
+            if (index !== -1) {
+                permitRecords[index].name = document.getElementById('editStuName').value;
+                permitRecords[index].civilId = document.getElementById('editStuCivilId').value;
+                permitRecords[index].studentId = document.getElementById('editStuStudentId').value;
+                permitRecords[index].building = document.getElementById('editStuBuilding').value;
+                permitRecords[index].bus = document.getElementById('editStuBus').value;
+                permitRecords[index].hasCar = document.getElementById('editStuHasCar').value;
+                permitRecords[index].carPlate = document.getElementById('editStuCarPlate').value;
+
+                saveRecords();
+                filterAndRenderAdminTable();
+                closeEditModal();
+                alert('تم تعديل بيانات الطالبة بنجاح!');
+            }
+        }
+
+        function deleteRecord(id) {
+            if (confirm('هل أنتِ متأكدة من حذف هذا السجل؟')) {
+                permitRecords = permitRecords.filter(r => r.id !== id);
+                saveRecords();
+                filterAndRenderAdminTable();
+            }
+        }
+
+        function exportToExcelSheet() {
+            if (permitRecords.length === 0) {
+                alert('لا توجد بيانات للتصدير!');
+                return;
+            }
+
+            const excelData = permitRecords.map(r => ({
+                'اسم الطالبة': r.name,
+                'الرقم المدني': r.civilId,
+                'الرقم الجامعي': r.studentId,
+                'المبنى السكني': r.building,
+                'استخدام الباص': r.bus,
+                'سيارة في السكن': r.hasCar,
+                'رقم السيارة': r.carPlate || '',
+                'تاريخ التقديم': r.date
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "تصاريح السكنات");
+            
+            XLSX.writeFile(workbook, `تصاريح_سكنات_الجامعة_الألمانية_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function printIndividualStudentPermit(id) {
+            const record = permitRecords.find(r => r.id === id);
+            if (!record) return;
+
+            document.getElementById('pvName').textContent = record.name;
+            document.getElementById('pvCivilId').textContent = record.civilId;
+            document.getElementById('pvStudentId').textContent = record.studentId;
+            document.getElementById('pvBuilding').textContent = record.building;
+            document.getElementById('pvBus').textContent = record.bus;
+
+            const carBox = document.getElementById('pvCarBox');
+            if (record.hasCar && (record.hasCar.includes('Yes') || record.hasCar.includes('نعم'))) {
+                carBox.classList.remove('hidden');
+                document.getElementById('pvCarPlate').textContent = record.carPlate || '________';
+            } else {
+                carBox.classList.add('hidden');
+            }
+
+            const auths = record.authorizedPersons || [];
+            document.getElementById('pvAuthPersonsSummary').textContent = `عدد المصرح لهم: ${auths.length} / 16`;
+
+            const grid = document.getElementById('pvCardsGrid');
+            grid.innerHTML = '';
+
+            grid.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+            auths.forEach((p, i) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = "print-card";
+                const imgSrc = p.cardImg ? p.cardImg : generateSampleOmanID(p.name, p.civilId, p.relation);
+                cardDiv.innerHTML = `<img src="${imgSrc}" alt="بطاقة الشخص المصرح له ${i + 1}">`;
+                grid.appendChild(cardDiv);
+            });
+
+            exitAdminPortal();
+            setTimeout(() => window.print(), 250);
+        }
+
+        function getCardGridColumns(count) {
+            if (count <= 1) return 1;
+            if (count <= 2) return 2;
+            if (count <= 3) return 3;
+            return 4;
+        }
+
+        function printAllPermitsBulk() {
+            if (permitRecords.length === 0) {
+                alert('لا توجد تصاريح للطباعة!');
+                return;
+            }
+
+            const container = document.getElementById('bulkPrintContainer');
+            container.innerHTML = '';
+
+            permitRecords.forEach((record) => {
+                const page = document.createElement('div');
+                page.className = "permit-sheet permit-page-break bg-white w-full";
+
+                const auths = record.authorizedPersons || [];
+                let cardGridHtml = '';
+
+                auths.forEach((p, i) => {
+                    const imgSrc = p.cardImg ? p.cardImg : generateSampleOmanID(p.name, p.civilId, p.relation);
+                    cardGridHtml += `<div class="print-card"><img src="${imgSrc}" alt="بطاقة الشخص المصرح له ${i + 1}"></div>`;
+                });
+
+                page.innerHTML = `
+                    <div class="text-right pb-3 mb-4 border-b-2 border-slate-800">
+                        <h2 class="text-gutech-red font-black text-2xl">تصاريح سكنات الجامعة الألمانية للتكنولوجيا في عمان</h2>
+                    </div>
+
+                    <div class="print-student-data bg-slate-50 p-4 rounded-xl border border-slate-300 mb-4">
+                        <div class="grid grid-cols-3 gap-y-3 text-base font-black text-slate-900">
+                            <div><span class="text-gutech-red">اسم الطالبة:</span> ${record.name}</div>
+                            <div><span class="text-gutech-blue">الرقم المدني:</span> ${record.civilId}</div>
+                            <div><span class="text-gutech-blue">الرقم الجامعي:</span> <b dir="ltr" style="direction:ltr; unicode-bidi:plaintext; display:inline-block;">${record.studentId}</b></div>
+                            <div><span class="text-emerald-700">المبنى:</span> ${record.building}</div>
+                            <div><span class="text-slate-700">المواصلات (الباص):</span> ${record.bus}</div>
+                            <div><span class="text-emerald-800">المصرح لهم:</span> ${auths.length} شخص</div>
+                        </div>
+                    </div>
+
+                    <div class="print-card-grid bg-slate-100 p-0">
+                        ${cardGridHtml}
+                    </div>
+                `;
+                container.appendChild(page);
+            });
+
+            window.print();
+        }
+
+        async function openCameraModal() {
+            const modal = document.getElementById('cameraModal');
+            const video = document.getElementById('cameraVideo');
+            modal.classList.remove('hidden');
+            isCaptured = false;
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 }, aspectRatio: { ideal: 1.333 } },
+                    audio: false
+                });
+                video.srcObject = mediaStream;
+                startEdgeDetection();
+            } catch (err) {
+                alert("تعذر الوصول إلى الكاميرا. يرجى السماح بالوصول للكاميرا في متصفحك.");
+                closeCameraModal();
+            }
+        }
+
+        function closeCameraModal() {
+            document.getElementById('cameraModal').classList.add('hidden');
+            if (detectionInterval) clearInterval(detectionInterval);
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+        }
+
+        function startEdgeDetection() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('captureCanvas');
+            const ctx = canvas.getContext('2d');
+            const detectStatus = document.getElementById('cardDetectStatus');
+
+            detectionInterval = setInterval(() => {
+                if (isCaptured || !video.videoWidth) return;
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const corners = detectCardCorners(canvas);
+                if (corners) {
+                    detectStatus.textContent = 'تم التعرف على حدود البطاقة!';
+                    if (document.getElementById('autoCaptureToggle').checked && !isCaptured) {
+                        isCaptured = true;
+                        setTimeout(manualCaptureCard, 350);
+                    }
+                }
+            }, 300);
+        }
+
+        function manualCaptureCard() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('captureCanvas');
+            const ctx = canvas.getContext('2d');
+
+            if (!video.videoWidth) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const corners = detectCardCorners(canvas);
+            const cropCanvas = corners ? warpCardToCanvas(canvas, corners) : cropCanvasToGuide(canvas);
+
+            const capturedImg = cropCanvas.toDataURL('image/jpeg', 0.92);
+
+            if (activeCaptureIndex !== null && currentAuthPersons[activeCaptureIndex]) {
+                currentAuthPersons[activeCaptureIndex].cardImg = capturedImg;
+            }
+
+            activeCaptureIndex = null;
+            closeCameraModal();
+            renderAuthPersonsList();
+            renderStudentPreview();
+        }
+
+        function detectCardCorners(canvas) {
+            if (!window.cv || !cv.Mat) return null;
+            const source = cv.imread(canvas);
+            const gray = new cv.Mat();
+            const blurred = new cv.Mat();
+            const edges = new cv.Mat();
+            const contours = new cv.MatVector();
+            const hierarchy = new cv.Mat();
+            let best = null;
+            try {
+                cv.cvtColor(source, gray, cv.COLOR_RGBA2GRAY);
+                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+                cv.Canny(blurred, edges, 60, 180);
+                cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+                const frameArea = canvas.width * canvas.height;
+                for (let i = 0; i < contours.size(); i++) {
+                    const contour = contours.get(i);
+                    const perimeter = cv.arcLength(contour, true);
+                    const approx = new cv.Mat();
+                    cv.approxPolyDP(contour, approx, Math.max(2, perimeter * 0.02), true);
+                    const area = Math.abs(cv.contourArea(approx));
+                    if (approx.rows === 4 && area > frameArea * 0.12 && area < frameArea * 0.95) {
+                        const points = [];
+                        for (let j = 0; j < 4; j++) points.push({ x: approx.intAt(j, 0), y: approx.intAt(j, 1) });
+                        const ordered = orderCardCorners(points);
+                        const width = Math.max(distance(ordered[0], ordered[1]), distance(ordered[2], ordered[3]));
+                        const height = Math.max(distance(ordered[0], ordered[3]), distance(ordered[1], ordered[2]));
+                        const ratio = width / Math.max(height, 1);
+                        if (ratio > 1.25 && ratio < 2.05 && (!best || area > best.area)) best = { points: ordered, area };
+                    }
+                    approx.delete();
+                    contour.delete();
+                }
+            } finally {
+                source.delete(); gray.delete(); blurred.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+            }
+            return best && best.points;
+        }
+
+        function orderCardCorners(points) {
+            return [...points].sort((a, b) => a.y - b.y || a.x - b.x).slice(0, 2).sort((a, b) => a.x - b.x)
+                .concat([...points].sort((a, b) => b.y - a.y || a.x - b.x).slice(0, 2).sort((a, b) => b.x - a.x));
+        }
+
+        function distance(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function warpCardToCanvas(sourceCanvas, points) {
+            const outputWidth = 1200;
+            const outputHeight = Math.round(outputWidth / 1.586);
+            const source = cv.imread(sourceCanvas);
+            const destination = new cv.Mat();
+            const sourcePoints = cv.matFromArray(4, 1, cv.CV_32FC2, points.flatMap(point => [point.x, point.y]));
+            const targetPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, outputWidth, 0, outputWidth, outputHeight, 0, outputHeight]);
+            const transform = cv.getPerspectiveTransform(sourcePoints, targetPoints);
+            cv.warpPerspective(source, destination, transform, new cv.Size(outputWidth, outputHeight));
+            const output = document.createElement('canvas');
+            output.width = outputWidth;
+            output.height = outputHeight;
+            cv.imshow(output, destination);
+            source.delete(); destination.delete(); sourcePoints.delete(); targetPoints.delete(); transform.delete();
+            return output;
+        }
+
+        function cropCanvasToGuide(canvas) {
+            const crop = getCardCrop(canvas.width, canvas.height);
+            const output = document.createElement('canvas');
+            output.width = crop.width;
+            output.height = crop.height;
+            output.getContext('2d').drawImage(canvas, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+            return output;
+        }
+
+        function getCardCrop(sourceWidth, sourceHeight) {
+            const cardAspectRatio = 1.586;
+            const cropWidth = Math.round(sourceWidth * 0.82);
+            const cropHeight = Math.round(cropWidth / cardAspectRatio);
+            return {
+                x: Math.round((sourceWidth - cropWidth) / 2),
+                y: Math.round((sourceHeight - cropHeight) / 2),
+                width: cropWidth,
+                height: cropHeight
+            };
+        }
+
+        window.onload = async function() {
+            await initStorage();
+            toggleCarPlateField();
+            renderStudentPreview();
+        };
+    </script>
+</body>
+</html>
