@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: gutech-accommodation-permits
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATA_DIR
+        value: /var/data
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: COOKIE_SECURE
+        value: true
+    disk:
+      name: permit-data
+      mountPath: /var/data
+      sizeGB: 1
