@@ -179,6 +179,14 @@ app.delete('/api/admin/students', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/student/permit-status', requireStudent, (req, res) => {
+  const studentId = String(req.body.studentId).trim().toLowerCase();
+  const hasPermit = readJson(recordsFile, []).some(record =>
+    String(record.studentId || '').trim().toLowerCase() === studentId
+  );
+  res.json({ hasPermit });
+});
+
 app.post('/api/student/permits', requireStudent, (req, res) => {
   const record = req.body || {};
   if (!record.studentId || !record.name) return res.status(400).json({ error: 'Missing record data' });

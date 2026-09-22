@@ -332,6 +332,10 @@
                             <span>حفظ واعتماد التصريح النهائي</span>
                         </button>
                     </form>
+                    <button id="studentUnlockButton" type="button" onclick="checkPermitAvailability()" class="hidden w-full py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>تحققي من حذف التصريح لإعادة التعبئة</span>
+                    </button>
                 </div>
 
                 <!-- Student Live Permit Document Preview Panel -->
@@ -1174,6 +1178,33 @@
             alert('تم اعتماد وحفظ التصريح بنجاح!');
         }
 
+        async function checkPermitAvailability() {
+            const button = document.getElementById('studentUnlockButton');
+            if (!authenticatedStudentId) return;
+
+            button.disabled = true;
+            try {
+                const response = await fetch(`${API_BASE}/api/student/permit-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ studentId: authenticatedStudentId })
+                });
+                if (!response.ok) throw new Error('status-check-failed');
+                const status = await response.json();
+                if (status.hasPermit) {
+                    alert('التصريح ما زال موجودًا. لا يمكن إعادة التعبئة قبل أن تحذفه المشرفة.');
+                    return;
+                }
+                unlockStudentPermit();
+                alert('تم حذف التصريح السابق. يمكنكِ تعبئة تصريح جديد الآن.');
+            } catch {
+                alert('تعذر التحقق من حالة التصريح. حاولي مرة أخرى.');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
         function lockStudentPermit() {
             studentPermitLocked = true;
             const form = document.getElementById('studentForm');
@@ -1185,6 +1216,20 @@
             submitButton.innerHTML = '<i class="fa-solid fa-lock"></i><span>تم اعتماد التصريح ونهائي</span>';
             submitButton.classList.remove('bg-gutech-blue', 'hover:bg-blue-900');
             submitButton.classList.add('bg-slate-400', 'cursor-not-allowed');
+            document.getElementById('studentUnlockButton').classList.remove('hidden');
+        }
+
+        function unlockStudentPermit() {
+            studentPermitLocked = false;
+            const form = document.getElementById('studentForm');
+            form.querySelectorAll('input, select, button').forEach((control) => {
+                control.disabled = control.id === 'stuStudentId';
+            });
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i><span>حفظ واعتماد التصريح النهائي</span>';
+            submitButton.classList.remove('bg-slate-400', 'cursor-not-allowed');
+            submitButton.classList.add('bg-gutech-blue', 'hover:bg-blue-900');
+            document.getElementById('studentUnlockButton').classList.add('hidden');
         }
 
         function resetForm() {
