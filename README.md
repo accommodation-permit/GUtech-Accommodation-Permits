@@ -25,4 +25,15 @@ GitHub Pages can only serve the static interface. It cannot run the Node.js API,
 
 The Render service serves both the page and `/api/*` routes from the same origin. The persistent disk keeps JSON data after restarts. Do not commit `.env`, student data, or passwords.
 
+## Persistent free storage with Supabase
+
+The server uses local JSON files unless both variables below are configured. When configured, the state is stored in the Supabase `app_state` table created by the SQL setup and survives Render restarts.
+
+```text
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Add these values only to Render Environment Variables. Never commit the service-role key to GitHub or expose it in the browser.
+
 GitHub repository: https://github.com/accommodation-permit/GUtech-Accommodation-Permits

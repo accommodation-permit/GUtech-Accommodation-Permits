@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 const app = express();
@@ -11,6 +12,11 @@ const PORT = Number(process.env.PORT || 3000);
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  : null;
 const sessions = new Map();
 const loginAttempts = new Map();
 
@@ -30,6 +36,36 @@ function readJson(filePath, fallback) {
 
 function writeJson(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+async function loadState() {
+  if (!supabase) {
+    return { records: readJson(recordsFile, []), students: readJson(studentsFile, []) };
+  }
+  const { data, error } = await supabase.from('app_state').select('records, students').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const state = { records: readJson(recordsFile, []), students: readJson(studentsFile, []) };
+    const { error: insertError } = await supabase.from('app_state').insert({ id: 1, ...state });
+    if (insertError) throw insertError;
+    return state;
+  }
+  return { records: data.records || [], students: data.students || [] };
+}
+
+async function saveState(state) {
+  if (!supabase) {
+    writeJson(recordsFile, state.records || []);
+    writeJson(studentsFile, state.students || []);
+    return;
+  }
+  const { error } = await supabase.from('app_state').upsert({
+    id: 1,
+    records: state.records || [],
+    students: state.students || [],
+    updated_at: new Date().toISOString()
+  });
+  if (error) throw error;
 }
 
 function ensureSeedFiles() {
@@ -118,13 +154,15 @@ app.post('/api/admin/login', (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/student/access', (req, res) => {
+app.post('/api/student/access', async (req, res, next) => {
+ try {
   const studentId = String(req.body?.studentId || '').trim().toLowerCase();
   const accessCode = String(req.body?.accessCode || '').trim();
   const key = `student:${req.ip}`;
   if (isRateLimited(key)) return res.status(429).json({ error: 'Too many attempts' });
 
-  const student = readJson(studentsFile, []).find(item =>
+  const state = await loadState();
+  const student = state.students.find(item =>
     String(item.studentId || '').trim().toLowerCase() === studentId &&
     String(item.accessCode || '').trim() === accessCode &&
     item.active !== false
@@ -134,7 +172,7 @@ app.post('/api/student/access', (req, res) => {
     return res.status(401).json({ error: 'Invalid student access' });
   }
 
-  const records = readJson(recordsFile, []);
+  const records = state.records;
   if (records.some(record => String(record.studentId || '').trim().toLowerCase() === studentId)) {
     return res.status(409).json({ error: 'Permit already submitted' });
   }
@@ -142,18 +180,24 @@ app.post('/api/student/access', (req, res) => {
   loginAttempts.delete(key);
   res.cookie('student_session', createSession('student', studentId), getCookieOptions(req));
   res.json({ ok: true, studentName: student.name || 'طالبة', studentId });
+ } catch (error) { next(error); }
 });
 
-app.get('/api/admin/data', requireAdmin, (req, res) => {
-  res.json({ records: readJson(recordsFile, []), students: readJson(studentsFile, []) });
+app.get('/api/admin/data', requireAdmin, async (req, res, next) => {
+  try { res.json(await loadState()); } catch (error) { next(error); }
 });
 
-app.post('/api/admin/permits/snapshot', requireAdmin, (req, res) => {
-  writeJson(recordsFile, Array.isArray(req.body?.records) ? req.body.records : []);
-  res.json({ ok: true });
+app.post('/api/admin/permits/snapshot', requireAdmin, async (req, res, next) => {
+  try {
+    const state = await loadState();
+    state.records = Array.isArray(req.body?.records) ? req.body.records : [];
+    await saveState(state);
+    res.json({ ok: true });
+  } catch (error) { next(error); }
 });
 
-app.post('/api/admin/students', requireAdmin, (req, res) => {
+app.post('/api/admin/students', requireAdmin, async (req, res, next) => {
+ try {
   const payload = req.body || {};
   const student = {
     studentId: String(payload.studentId || '').trim(),
@@ -165,39 +209,59 @@ app.post('/api/admin/students', requireAdmin, (req, res) => {
   if (!student.studentId || !student.accessCode || !student.name) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  const students = readJson(studentsFile, []);
+  const state = await loadState();
+  const students = state.students;
   const index = students.findIndex(item => item.studentId.toLowerCase() === student.studentId.toLowerCase());
   if (index >= 0) students[index] = { ...students[index], ...student };
   else students.push(student);
-  writeJson(studentsFile, students);
+  state.students = students;
+  await saveState(state);
   res.json({ ok: true });
+ } catch (error) { next(error); }
 });
 
-app.get('/api/admin/students', requireAdmin, (req, res) => res.json(readJson(studentsFile, [])));
-app.delete('/api/admin/students', requireAdmin, (req, res) => {
-  writeJson(studentsFile, []);
-  res.json({ ok: true });
+app.get('/api/admin/students', requireAdmin, async (req, res, next) => {
+  try { res.json((await loadState()).students); } catch (error) { next(error); }
+});
+app.delete('/api/admin/students', requireAdmin, async (req, res, next) => {
+  try {
+    const state = await loadState();
+    state.students = [];
+    await saveState(state);
+    res.json({ ok: true });
+  } catch (error) { next(error); }
 });
 
-app.post('/api/student/permit-status', requireStudent, (req, res) => {
+app.post('/api/student/permit-status', requireStudent, async (req, res, next) => {
+ try {
   const studentId = String(req.body.studentId).trim().toLowerCase();
-  const hasPermit = readJson(recordsFile, []).some(record =>
+  const hasPermit = (await loadState()).records.some(record =>
     String(record.studentId || '').trim().toLowerCase() === studentId
   );
   res.json({ hasPermit });
+ } catch (error) { next(error); }
 });
 
-app.post('/api/student/permits', requireStudent, (req, res) => {
+app.post('/api/student/permits', requireStudent, async (req, res, next) => {
+ try {
   const record = req.body || {};
   if (!record.studentId || !record.name) return res.status(400).json({ error: 'Missing record data' });
-  const records = readJson(recordsFile, []);
+  const state = await loadState();
+  const records = state.records;
   const studentId = String(record.studentId).trim().toLowerCase();
   if (records.some(item => String(item.studentId || '').trim().toLowerCase() === studentId)) {
     return res.status(409).json({ error: 'Permit already submitted' });
   }
   records.push(record);
-  writeJson(recordsFile, records);
+  state.records = records;
+  await saveState(state);
   res.json({ ok: true });
+ } catch (error) { next(error); }
+});
+
+app.use((error, req, res, next) => {
+  console.error(error);
+  res.status(500).json({ error: 'Server storage error' });
 });
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
