@@ -20,6 +20,11 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
 const sessions = new Map();
 const loginAttempts = new Map();
 
+// Storage backend, decided once at boot. An explicit DATA_DIR is only needed for
+// the local file mode; production relies on Supabase.
+const STORAGE_MODE = supabase ? 'supabase' : 'files';
+const READ_ONLY_DEPLOY = process.env.READ_ONLY_DEPLOY === 'true';
+
 app.set('trust proxy', 1);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const recordsFile = path.join(DATA_DIR, 'records.json');
@@ -133,6 +138,19 @@ if (!ADMIN_PASSWORD_HASH) {
   throw new Error('ADMIN_PASSWORD_HASH is missing. Set it in the deployment environment.');
 }
 
+// Fail loudly instead of silently serving an empty roster: if Supabase is
+// configured but unreachable, the app must not fall back to empty local files.
+if (supabase) {
+  supabase.from('app_state').select('id').eq('id', 1).maybeSingle().then(({ error }) => {
+    if (error) {
+      console.error(`Supabase is not reachable at boot (${error.message}). Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.`);
+    }
+  }).catch((error) => {
+    console.error('Supabase health check failed at boot:', error.message);
+  });
+}
+console.log(`Storage mode: ${STORAGE_MODE}`);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.static(ROOT_DIR));
@@ -190,9 +208,55 @@ app.get('/api/admin/data', requireAdmin, async (req, res, next) => {
 app.post('/api/admin/permits/snapshot', requireAdmin, async (req, res, next) => {
   try {
     const state = await loadState();
-    state.records = Array.isArray(req.body?.records) ? req.body.records : [];
+    const records = Array.isArray(req.body?.records) ? req.body.records : [];
+    const replaceAll = req.body?.replaceAll === true;
+    if (replaceAll) {
+      state.records = records;
+    } else {
+      // Merge: upsert incoming records by id without dropping anything the
+      // admin panel had not seen yet (permits submitted while it was open).
+      const byId = new Map(state.records.map(r => [String(r.id || ''), r]));
+      for (const record of records) {
+        const key = String(record?.id || '');
+        if (!key) continue;
+        byId.set(key, record);
+      }
+      state.records = [...byId.values()];
+    }
     await saveState(state);
-    res.json({ ok: true });
+    res.json({ ok: true, records: state.records });
+  } catch (error) { next(error); }
+});
+
+// Targeted delete so removing one permit never rewrites the rest of the list.
+app.delete('/api/admin/permits/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const state = await loadState();
+    const id = String(req.params.id || '');
+    const before = state.records.length;
+    state.records = state.records.filter(record => String(record.id || '') !== id);
+    if (state.records.length === before) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+    await saveState(state);
+    res.json({ ok: true, records: state.records });
+  } catch (error) { next(error); }
+});
+
+// Target a permit by the student it belongs to, for rows saved without an id.
+app.delete('/api/admin/permits/by-student/:studentId', requireAdmin, async (req, res, next) => {
+  try {
+    const studentId = String(req.params.studentId || '').trim().toLowerCase();
+    const state = await loadState();
+    const before = state.records.length;
+    state.records = state.records.filter(record =>
+      String(record.studentId || '').trim().toLowerCase() !== studentId
+    );
+    if (state.records.length === before) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+    await saveState(state);
+    res.json({ ok: true, records: state.records });
   } catch (error) { next(error); }
 });
 

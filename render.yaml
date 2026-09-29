@@ -7,16 +7,17 @@ services:
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: 20
-      - key: DATA_DIR
-        value: /var/data
+        value: "20"
       - key: SESSION_SECRET
         generateValue: true
       - key: ADMIN_PASSWORD_HASH
         sync: false
       - key: COOKIE_SECURE
-        value: true
-    disk:
-      name: permit-data
-      mountPath: /var/data
-      sizeGB: 1
+        value: "true"
+      # Data lives in Supabase, so no persistent disk is declared here.
+      # A disk would be tied to this service only and would be wiped when the
+      # service is replaced. With Supabase, redeploys never touch the data.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

@@ -5,7 +5,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "create-admin": "node create-admin.js"
+    "create-admin": "node create-admin.js",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "setup:supabase": "node scripts/setup-supabase.js",
+    "migrate:supabase": "node scripts/migrate-to-supabase.js",
+    "backup": "node scripts/backup-supabase.js backup",
+    "restore": "node scripts/backup-supabase.js restore"
   },
   "engines": {
     "node": ">=20"
