@@ -1393,12 +1393,37 @@
             }
         }
 
-        function deleteRecord(id) {
-            if (confirm('هل أنتِ متأكدة من حذف هذا السجل؟')) {
-                permitRecords = permitRecords.filter(r => r.id !== id);
-                saveRecords();
-                filterAndRenderAdminTable();
+        async function deleteRecord(id) {
+            if (!confirm('هل أنتِ متأكدة من حذف هذا السجل؟')) return;
+            const record = permitRecords.find(r => r.id === id);
+            try {
+                // Delete on the server by id so other permits are untouched.
+                let response;
+                if (record && record.id) {
+                    response = await fetch(`${API_BASE}/api/admin/permits/${encodeURIComponent(id)}`, {
+                        method: 'DELETE',
+                        credentials: 'same-origin'
+                    });
+                } else if (record && record.studentId) {
+                    response = await fetch(`${API_BASE}/api/admin/permits/by-student/${encodeURIComponent(record.studentId)}`, {
+                        method: 'DELETE',
+                        credentials: 'same-origin'
+                    });
+                } else {
+                    permitRecords = permitRecords.filter(r => r.id !== id);
+                    saveRecords();
+                    filterAndRenderAdminTable();
+                    return;
+                }
+                if (!response.ok && response.status !== 404) throw new Error('delete-failed');
+                const result = await response.json().catch(() => null);
+                permitRecords = (result && Array.isArray(result.records)) ? result.records : permitRecords.filter(r => r.id !== id);
+            } catch {
+                alert('تعذر حذف السجل. يرجى المحاولة مرة أخرى.');
+                return;
             }
+            updateAdminDashboard();
+            filterAndRenderAdminTable();
         }
 
         function exportToExcelSheet() {
